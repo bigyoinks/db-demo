@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import pool from '@/lib/db';
 import StarRating from '@/components/StarRating';
-import AllergenBadge from '@/components/AllergenBadge';
+import MenuSection from '@/components/MenuSection';
 import ReviewSection from '@/components/ReviewSection';
 
 function formatTime(t: string) {
@@ -120,32 +120,8 @@ export default async function RestaurantPage({
         )}
       </div>
 
-      {/* Menu — full width, 4-column grid */}
-      <section>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Menu <span className="text-gray-400 font-normal text-base">({menuItems.length} items)</span>
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {menuItems.map(item => (
-            <div key={item.id} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-2">
-              <div className="flex justify-between items-start gap-2">
-                <h3 className="font-semibold text-gray-900 leading-snug">{item.item_name}</h3>
-                <span className="text-sm font-bold text-gray-700 shrink-0">{item.price}</span>
-              </div>
-              {item.description && (
-                <p className="text-sm text-gray-500 leading-relaxed">{item.description}</p>
-              )}
-              {item.allergens.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-auto pt-1">
-                  {item.allergens.map((a: string) => (
-                    <AllergenBadge key={a} name={a} />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Menu */}
+      <MenuSection items={menuItems} />
 
       {/* Reviews — full width, form + list side by side */}
       <section>

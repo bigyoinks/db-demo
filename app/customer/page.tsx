@@ -6,21 +6,14 @@ interface SearchParams {
   cuisine?: string;
   price_range?: string | string[];
   min_rating?: string;
-  exclude_allergen?: string | string[];
   open_now?: string;
 }
 
 const PRICE_RANGES = ['$', '$$', '$$$', '$$$$'];
 
 async function getFilterOptions() {
-  const [cuisines, allergens] = await Promise.all([
-    pool.query(`SELECT DISTINCT cuisine FROM restaurant_chain WHERE cuisine IS NOT NULL ORDER BY cuisine`),
-    pool.query(`SELECT DISTINCT allergen_name FROM allergens WHERE allergen_name IS NOT NULL AND allergen_name <> 'None' ORDER BY allergen_name`),
-  ]);
-  return {
-    cuisines: cuisines.rows.map(r => r.cuisine as string),
-    allergens: allergens.rows.map(r => r.allergen_name as string),
-  };
+  const { rows } = await pool.query(`SELECT DISTINCT cuisine FROM restaurant_chain WHERE cuisine IS NOT NULL ORDER BY cuisine`);
+  return rows.map(r => r.cuisine as string);
 }
 
 async function getRestaurants(sp: SearchParams) {
@@ -31,11 +24,6 @@ async function getRestaurants(sp: SearchParams) {
     ? [sp.price_range]
     : [];
   const minRating = parseFloat(sp.min_rating || '0');
-  const excludeAllergens = Array.isArray(sp.exclude_allergen)
-    ? sp.exclude_allergen
-    : sp.exclude_allergen
-    ? [sp.exclude_allergen]
-    : [];
   const openNow = sp.open_now === 'true';
 
   const conditions: string[] = [];
@@ -53,10 +41,6 @@ async function getRestaurants(sp: SearchParams) {
   if (minRating > 0) {
     conditions.push(`(rc.avg_rating IS NOT NULL AND rc.avg_rating >= $${i++})`);
     values.push(minRating);
-  }
-  if (excludeAllergens.length) {
-    conditions.push(`mi.id NOT IN (SELECT item_id FROM allergens WHERE allergen_name = ANY($${i++}::text[]))`);
-    values.push(excludeAllergens);
   }
   if (openNow) {
     conditions.push(`EXISTS (
@@ -77,7 +61,6 @@ async function getRestaurants(sp: SearchParams) {
      FROM restaurant_chain rc
      JOIN restaurant r ON r.chain_id = rc.id
      JOIN location l ON l.id = r.location_id
-     JOIN menu_item mi ON mi.restaurant_id = r.id
      WHERE TRUE ${where}
      GROUP BY rc.id, rc.name, rc.cuisine, rc.price_range, rc.avg_rating
      ORDER BY rc.avg_rating DESC NULLS LAST`,
@@ -95,7 +78,7 @@ const priceColor: Record<string, string> = {
 
 export default async function CustomerPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams;
-  const [{ cuisines, allergens }, restaurants] = await Promise.all([
+  const [cuisines, restaurants] = await Promise.all([
     getFilterOptions(),
     getRestaurants(sp),
   ]);
@@ -104,11 +87,6 @@ export default async function CustomerPage({ searchParams }: { searchParams: Pro
     ? sp.price_range
     : sp.price_range
     ? [sp.price_range]
-    : [];
-  const selectedAllergens = Array.isArray(sp.exclude_allergen)
-    ? sp.exclude_allergen
-    : sp.exclude_allergen
-    ? [sp.exclude_allergen]
     : [];
 
   return (
@@ -191,31 +169,6 @@ export default async function CustomerPage({ searchParams }: { searchParams: Pro
             </label>
           </div>
         </div>
-
-        {/* Exclude Allergens */}
-        {allergens.length > 0 && (
-          <div className="mt-4">
-            <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
-              Exclude allergens
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {allergens.map(a => (
-                <label key={a} className="flex items-center gap-1 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="exclude_allergen"
-                    value={a}
-                    defaultChecked={selectedAllergens.includes(a)}
-                    className="rounded"
-                  />
-                  <span className="text-xs bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full border border-orange-200">
-                    {a}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="mt-4 flex gap-2">
           <button
