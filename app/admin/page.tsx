@@ -61,11 +61,6 @@ export default function AdminPage() {
     load();
   }
 
-  async function handleDelete(id: number, name: string) {
-    if (!confirm(`Delete "${name}" and all its locations?`)) return;
-    await fetch(`/api/chains/${id}`, { method: 'DELETE' });
-    load();
-  }
 
   if (loading) return <div className="text-gray-400 py-8 text-center">Loading…</div>;
 
@@ -185,12 +180,6 @@ export default function AdminPage() {
                     className="text-xs text-blue-600 hover:underline font-medium"
                   >
                     Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(c.id, c.name)}
-                    className="text-xs text-red-400 hover:text-red-600"
-                  >
-                    Delete
                   </button>
                   <Link href={`/admin/chains/${c.id}`} className="text-xs text-gray-500 hover:text-gray-700 ml-auto">
                     Manage locations →
